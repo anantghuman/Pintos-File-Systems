@@ -29,6 +29,22 @@ void check_ptr (const void *ptr)
   }
 }
 
+void check_buffer (const void *buffer, unsigned int size) {
+  check_ptr(buffer);
+  if (size == 0) 
+    {
+      return;
+    }
+
+  const uintptr_t *begin = pg_round_down(buffer);
+  while (begin <=  (uint8_t)(begin + size - 1)) {
+    uintptr_t addr = (uintptr_t)begin;
+    check_ptr(addr);
+    begin += PGSIZE;
+  }
+  check_ptr(begin + size - 1);
+}
+
 /* Returns the file descriptor for a given FD. */
 struct file_descriptor *find_filept(int fd) 
 {
@@ -227,16 +243,9 @@ static void syscall_handler (struct intr_frame *f UNUSED)
         break;
       }
       if (*size_ptr > 0) {
-        check_ptr (*buf_ptr);
+        check_buffer (*buf_ptr, *size_ptr);
       }
       if (*fd_ptr == 0) {
-        uint8_t *t = (uint8_t*) *buf_ptr;
-        int i = 0;
-        while (i < *size_ptr) {
-          check_ptr (t + i);
-          t[i] = input_getc ();
-          i++;
-        }
         f->eax = *size_ptr;
         break;
       }
@@ -266,7 +275,7 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       check_ptr (t3);
       
       if (*t3 > 0) {
-        check_ptr (*t2);
+        check_buffer (*t2, *t3);
       }
 
       if (*t == 1) {

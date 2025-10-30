@@ -149,9 +149,6 @@ int process_wait (tid_t child_tid UNUSED) {
   while(ce != list_end (&current->children)) {
     struct child_process *c = list_entry (ce, struct child_process, child_elem);
     if (c->pid == child_tid) {
-        if (c->waited) {
-          return -1;
-        }
         c->waited = true;
         sema_down (&c->wait);
         int status = c->exit_stat;
@@ -174,6 +171,13 @@ void process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  if (cur->running_file != NULL) 
+      {
+        file_allow_write (cur->running_file);
+        file_close (cur->running_file);
+        cur->running_file = NULL;
+      }
+
   while (!list_empty (&cur ->fd_table)) {
     struct list_elem *temp = list_pop_front (&cur->fd_table);
     struct file_descriptor *fd = list_entry (temp, struct file_descriptor, 
@@ -187,12 +191,7 @@ void process_exit (void)
     sema_up (&cur->child_ptr->wait);
   }
 
-  if (cur->running_file != NULL) 
-      {
-        file_allow_write (cur->running_file);
-        file_close (cur->running_file);
-        cur->running_file = NULL;
-      }
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
