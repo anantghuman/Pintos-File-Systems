@@ -18,6 +18,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+extern struct lock file_lock;
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -59,7 +61,6 @@ tid_t process_execute (const char *file_name)
   char *n = strtok_r (name, " ", &temp);
   struct child_process *c = malloc (sizeof(*c));
   c->pid = -1;
-  c->waited = false;
   c->exit_stat = -1;
   sema_init (&c->wait, 0);
   sema_init (&c->load_wait, 0);
@@ -149,10 +150,6 @@ int process_wait (tid_t child_tid UNUSED) {
   while(ce != list_end (&current->children)) {
     struct child_process *c = list_entry (ce, struct child_process, child_elem);
     if (c->pid == child_tid) {
-        if (c->waited) {
-          return -1;
-        }
-        c->waited = true;
         sema_down (&c->wait);
         int status = c->exit_stat;
         list_remove (ce);
@@ -174,11 +171,22 @@ void process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  if (cur->running_file != NULL) 
+      {
+        file_allow_write (cur->running_file);
+        lock_acquire(&file_lock);
+        file_close (cur->running_file);
+        lock_release(&file_lock);
+        cur->running_file = NULL;
+      }
+
   while (!list_empty (&cur ->fd_table)) {
     struct list_elem *temp = list_pop_front (&cur->fd_table);
     struct file_descriptor *fd = list_entry (temp, struct file_descriptor, 
                                                               file_elem);
+    lock_acquire(&file_lock);
     file_close (fd->file);
+    lock_release(&file_lock);
     free (fd);
   }
 
@@ -187,12 +195,7 @@ void process_exit (void)
     sema_up (&cur->child_ptr->wait);
   }
 
-  if (cur->running_file != NULL) 
-      {
-        file_allow_write (cur->running_file);
-        file_close (cur->running_file);
-        cur->running_file = NULL;
-      }
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -320,7 +323,9 @@ bool load (const char *file_name, void (**eip) (void), void **esp)
   char *name = palloc_get_page (0);
   if (name == NULL)
     {
+      lock_acquire(&file_lock);
       file_close (file);
+      lock_release(&file_lock);
       return false;
     }
   strlcpy (name, file_name, strlen (file_name) + 1);
@@ -423,7 +428,9 @@ done:
     file_deny_write(file);
     t->running_file = file;
   } else {
+    lock_acquire(&file_lock);
     file_close(file);
+    lock_release(&file_lock);
   }
   return success;
 }

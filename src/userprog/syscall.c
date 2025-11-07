@@ -35,8 +35,7 @@ struct file_descriptor *find_filept(int fd)
   struct thread *fd_ptr = thread_current ();
   struct list_elem *i = list_begin (&fd_ptr->fd_table);
   while (i != list_end (&fd_ptr->fd_table)) {
-    struct file_descriptor *file_desc = 
-    list_entry (i, struct file_descriptor, file_elem);
+    struct file_descriptor *file_desc = list_entry (i, struct file_descriptor, file_elem);
     if (file_desc->num_fd == fd) {
       return file_desc;
     }
@@ -192,6 +191,9 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       }
       file_desc = malloc (sizeof (*file_desc));
       file_desc->num_fd = thread_current ()->current_fd++;
+      if (thread_current ()->current_fd == 2147483647) {
+        thread_current ()->current_fd = 2;
+      }
       file_desc->file = file;
       f->eax = file_desc->num_fd;
       list_push_back (&thread_current ()->fd_table, &file_desc->file_elem);
@@ -228,15 +230,15 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       }
       if (*size_ptr > 0) {
         check_ptr (*buf_ptr);
+        const uint8_t *page = *buf_ptr;
+
+        while (page < (uint8_t*)*buf_ptr + *size_ptr) {
+          check_ptr(page);
+          page = (uint8_t*)pg_round_down(page) + PGSIZE;
+        }
+        check_ptr((uint8_t*)*buf_ptr + *size_ptr - 1);
       }
       if (*fd_ptr == 0) {
-        uint8_t *t = (uint8_t*) *buf_ptr;
-        int i = 0;
-        while (i < *size_ptr) {
-          check_ptr (t + i);
-          t[i] = input_getc ();
-          i++;
-        }
         f->eax = *size_ptr;
         break;
       }
@@ -267,6 +269,13 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       
       if (*t3 > 0) {
         check_ptr (*t2);
+        const uint8_t *page = *t2;
+
+        while (page < (uint8_t*)*t2 + *t3) {
+          check_ptr(page);
+          page = (uint8_t*)pg_round_down(page) + PGSIZE;
+        }
+        check_ptr((uint8_t*)*t2 + *t3 - 1);
       }
 
       if (*t == 1) {
@@ -324,14 +333,15 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       if (*fd_ptr < 2) {
         break;
       }
-      lock_acquire (&file_lock);
+    
       file_desc = find_filept (*fd_ptr);
       if (file_desc) {
+        lock_acquire(&file_lock);
         file_close (file_desc->file);
         list_remove (&file_desc->file_elem);
+        lock_release(&file_lock);
         free (file_desc);
       }
-      lock_release (&file_lock);
       break;
   }
   // thread_current()->status = -1;

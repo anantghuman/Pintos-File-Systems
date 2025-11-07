@@ -130,7 +130,6 @@ struct file_descriptor {
 struct child_process {
    int32_t pid;
    int exit_stat;
-   bool waited;
    struct semaphore wait;
    struct list_elem child_elem;
    bool success;
