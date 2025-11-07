@@ -31,7 +31,7 @@ void check_ptr (const void *ptr)
 
 /* Returns the file descriptor for a given FD. */
 struct file_descriptor *find_filept(int fd) 
-{
+{ 
   struct thread *fd_ptr = thread_current ();
   struct list_elem *i = list_begin (&fd_ptr->fd_table);
   while (i != list_end (&fd_ptr->fd_table)) {
