@@ -25,7 +25,7 @@ void check_ptr (const void *ptr)
   {
     thread_current()->exit_stat = -1;
     printf("%s: exit(-1)\n", thread_current ()->name);
-    thread_exit();
+    thread_exit(); 
   }
 }
 
