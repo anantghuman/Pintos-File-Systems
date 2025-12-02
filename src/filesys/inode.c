@@ -6,6 +6,7 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -18,6 +19,11 @@ struct inode_disk
   off_t length;         /* File size in bytes. */
   unsigned magic;       /* Magic number. */
   uint32_t unused[125]; /* Not used. */
+
+  block_sector_t direct_blocks[12];
+  block_sector_t indirect_block;
+  block_sector_t double_indirect_block;
+
 };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -36,6 +42,7 @@ struct inode
   bool removed;           /* True if deleted, false otherwise. */
   int deny_write_cnt;     /* 0: writes ok, >0: deny writes. */
   struct inode_disk data; /* Inode content. */
+  struct lock inode_lock;
 };
 
 /* Returns the block device sector that contains byte offset POS
@@ -105,6 +112,7 @@ struct inode *inode_open (block_sector_t sector)
 {
   struct list_elem *e;
   struct inode *inode;
+  lock_init(&inode->inode_lock);
 
   /* Check whether this inode is already open. */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
@@ -130,6 +138,7 @@ struct inode *inode_open (block_sector_t sector)
   inode->deny_write_cnt = 0;
   inode->removed = false;
   block_read (fs_device, inode->sector, &inode->data);
+  memcpy (&inode->data, &inode->data, sizeof (inode->data));
   return inode;
 }
 
