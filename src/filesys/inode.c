@@ -63,15 +63,49 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
 static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate) {
   static char zero_block[BLOCK_SECTOR_SIZE];
   if (index < DIRECT_BLOCKS_COUNT) {
-    if (inode_d->direct_blocks(index) == 0 && allocate) {
+    if (inode_d->direct_blocks(index) == 0 && allocate) 
+      {
       if (!free_map_allocate (1, &inode_d->direct_blocks[index]))
         return (block_sector_t) -1;
-    }
+      }
   }
   index -= DIRECT_BLOCKS_COUNT;
-  if (index < POINTERS_PER_BLOCK) {
-    
-  }
+  if (index < BLOCK_SECTOR_SIZE/ sizeof (block_sector_t)) 
+    {
+      block_sector_t indirect = inode_d->indirect_block;
+      if (indirect == 0 && allocate) 
+        {
+          if (!free_map_allocate (1, &inode_d->indirect_block))
+          {
+            return (block_sector_t) -1;
+          }
+          inode_d->indirect_block = indirect;
+          block_write (fs_device, indirect, zero_block);
+        }
+      // if (indirect == 0) {
+      //   return (block_sector_t) -1;
+      // }
+      block_sector_t indirect_data = malloc (BLOCK_SECTOR_SIZE);
+      if (indirect_data == NULL) 
+        {
+          return (block_sector_t) -1;
+        }
+      block_read (fs_device, indirect, indirect_data);
+      if (indirect_data[index] == 0 && allocate)
+        {
+          if (!free_map_allocate (1, &indirect_data[index]))
+            {
+              free (indirect_data);
+              return (block_sector_t) -1;
+            }
+        }
+        block_write (fs_device, indirect_data[index], zero_block);
+        block_write (fs_device, indirect, indirect_data);
+        block_sector_t result =
+        indirect_data[index] ? indirect_data[index] : (block_sector_t) -1;
+        free (indirect_data);
+        return result
+    }
 }
 
 /* List of open inodes, so that opening a single inode twice
