@@ -26,6 +26,8 @@ struct inode_disk
 
 };
 
+static const DIRECT_BLOCKS_COUNT = 12;
+
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
 static inline size_t bytes_to_sectors (off_t size)
@@ -56,6 +58,20 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
     return inode->data.start + pos / BLOCK_SECTOR_SIZE;
   else
     return -1;
+}
+
+static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate) {
+  static char zero_block[BLOCK_SECTOR_SIZE];
+  if (index < DIRECT_BLOCKS_COUNT) {
+    if (inode_d->direct_blocks(index) == 0 && allocate) {
+      if (!free_map_allocate (1, &inode_d->direct_blocks[index]))
+        return (block_sector_t) -1;
+    }
+  }
+  index -= DIRECT_BLOCKS_COUNT;
+  if (index < POINTERS_PER_BLOCK) {
+    
+  }
 }
 
 /* List of open inodes, so that opening a single inode twice
