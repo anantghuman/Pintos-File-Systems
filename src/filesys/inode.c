@@ -15,10 +15,10 @@
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
 {
-  block_sector_t start; /* First data sector. */
+  
   off_t length;         /* File size in bytes. */
   unsigned magic;       /* Magic number. */
-  uint32_t unused[125]; /* Not used. */
+  uint32_t unused[112]; /* Not used. */
 
   block_sector_t direct_blocks[12];
   block_sector_t indirect_block;
@@ -136,17 +136,16 @@ bool inode_create (block_sector_t sector, off_t length)
       size_t sectors = bytes_to_sectors (length);
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
-      if (free_map_allocate (sectors, &disk_inode->start))
+      if (length != 0)
         {
-          block_write (fs_device, sector, disk_inode);
-          if (sectors > 0)
-            {
-              static char zeros[BLOCK_SECTOR_SIZE];
-              size_t i;
-
-              for (i = 0; i < sectors; i++)
-                block_write (fs_device, disk_inode->start + i, zeros);
+          size_t s = DIV_ROUND_UP (length, BLOCK_SECTOR_SIZE);
+          for (int i = 0; i <= s ; i++) {
+            block_sector_t temp = get_data_block(disk_inode, i, true);
+            if (temp == -1) {
+              free (disk_inode);
+              return success;
             }
+          }
           success = true;
         }
       free (disk_inode);
@@ -303,6 +302,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size,
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                       off_t offset)
 {
+  lock_acquire (&inode->inode_lock);
   const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
   uint8_t *bounce = NULL;
@@ -313,7 +313,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   while (size > 0)
     {
       /* Sector to write, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset);
+      block_sector_t sector_idx = get_data_block (&inode->data, offset / BLOCK_SECTOR_SIZE, true);
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
