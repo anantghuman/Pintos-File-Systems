@@ -26,8 +26,6 @@ struct inode_disk
 
 };
 
-static const DIRECT_BLOCKS_COUNT = 12;
-
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
 static inline size_t bytes_to_sectors (off_t size)
@@ -55,7 +53,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
 {
   ASSERT (inode != NULL);
   if (pos < inode->data.length)
-    return inode->data.start + pos / BLOCK_SECTOR_SIZE;
+    return get_data_block (&inode->data, pos / BLOCK_SECTOR_SIZE, false);
   else
     return -1;
 }
@@ -63,10 +61,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
 static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate) {
   static char zero_block[BLOCK_SECTOR_SIZE];
   if (index < DIRECT_BLOCKS_COUNT) {
-    if (inode_d->direct_blocks(index) == 0 && allocate) 
+    if (inode_d->direct_blocks[index] == 0 && allocate) 
       {
       if (!free_map_allocate (1, &inode_d->direct_blocks[index]))
-        return (block_sector_t) -1;
+        return -1;
       }
   }
   index -= DIRECT_BLOCKS_COUNT;
@@ -77,18 +75,18 @@ static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, 
         {
           if (!free_map_allocate (1, &inode_d->indirect_block))
           {
-            return (block_sector_t) -1;
+            return -1;
           }
           inode_d->indirect_block = indirect;
           block_write (fs_device, indirect, zero_block);
         }
       // if (indirect == 0) {
-      //   return (block_sector_t) -1;
+      //   return -1;
       // }
-      block_sector_t indirect_data = malloc (BLOCK_SECTOR_SIZE);
+      block_sector_t *indirect_data = malloc (BLOCK_SECTOR_SIZE);
       if (indirect_data == NULL) 
         {
-          return (block_sector_t) -1;
+          return -1;
         }
       block_read (fs_device, indirect, indirect_data);
       if (indirect_data[index] == 0 && allocate)
@@ -96,15 +94,16 @@ static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, 
           if (!free_map_allocate (1, &indirect_data[index]))
             {
               free (indirect_data);
-              return (block_sector_t) -1;
+              return -1;
             }
+          block_write (fs_device, indirect_data[index], zero_block);
+          block_write (fs_device, indirect, indirect_data);
         }
-        block_write (fs_device, indirect_data[index], zero_block);
-        block_write (fs_device, indirect, indirect_data);
-        block_sector_t result =
+        
+        block_sector_t ret =
         indirect_data[index] ? indirect_data[index] : (block_sector_t) -1;
         free (indirect_data);
-        return result
+        return ret;
     }
 }
 

@@ -5,6 +5,9 @@
 #include "filesys/off_t.h"
 #include "devices/block.h"
 
+static const int DIRECT_BLOCKS_COUNT = 12;
+
+
 struct bitmap;
 
 void inode_init (void);
