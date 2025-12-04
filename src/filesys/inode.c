@@ -17,7 +17,7 @@ struct inode_disk
 {
   off_t length;         /* File size in bytes. */
   unsigned magic;       /* Magic number. */
-  uint32_t unused[111]; /* Not used. */
+  uint32_t unused[112]; /* Not used. */
 
   block_sector_t direct_blocks[12];
   block_sector_t indirect_block;
@@ -47,6 +47,8 @@ struct inode
    within INODE.
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
+
+   static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate);
 static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
 {
   ASSERT (inode != NULL);
@@ -270,6 +272,52 @@ block_sector_t inode_get_inumber (const struct inode *inode)
   return inode->sector;
 }
 
+
+void inode_free_direct_blocks (struct inode *inode)
+{
+  // free direct blocks
+  for (int i = 0; i < DIRECT_BLOCKS_COUNT; i++) 
+  {
+    free_map_release (inode->data.direct_blocks[i], 1);
+  }
+}
+
+void inode_free_indirect_block (struct inode *inode)
+{
+  // free indirect blocks
+  if (inode->data.indirect_block != 0)
+  {
+    block_sector_t *temp = malloc (sizeof (block_sector_t));
+    block_read (fs_device, inode->data.indirect_block, temp);
+    for (int i = 0; i < BLOCK_SECTOR_SIZE / sizeof (block_sector_t); i++) 
+    {
+      
+      free_map_release (temp[i], 1);
+      
+    }
+    free (temp);
+    free_map_release (inode->data.indirect_block, 1);
+  }
+}
+
+void inode_free_double_indirect_block (struct inode *inode)
+{
+  // free double indirect blocks
+  size_t size = BLOCK_SECTOR_SIZE / sizeof (block_sector_t);
+  if (inode->data.double_indirect_block != 0)
+    {
+      {
+        block_sector_t *level1 = malloc (BLOCK_SECTOR_SIZE);
+        block_read (fs_device, inode->data.double_indirect_block, level1);
+
+        for (int i = 0; i < size; i++)
+        {
+          inode_free_indirect_block(level1[i]);
+        }
+      }
+    }
+}
+
 /* Closes INODE and writes it to disk. (Does it?  Check code.)
    If this was the last reference to INODE, frees its memory.
    If INODE was also a removed inode, frees its blocks. */
@@ -288,6 +336,9 @@ void inode_close (struct inode *inode)
       /* Deallocate blocks if removed. */
       if (inode->removed)
         {
+          inode_free_direct_blocks (inode);
+          inode_free_indirect_block (inode);
+          inode_free_double_indirect_block (inode);
           free_map_release (inode->sector, 1);
         }
 
