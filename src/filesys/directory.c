@@ -25,7 +25,27 @@ struct dir_entry
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, size_t entry_cnt)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  bool ret = false;
+  if (inode_create (sector, entry_cnt * sizeof (struct dir_entry))) {
+    struct dir *directory = dir_open (inode_open (sector));
+    if (!directory) {
+      return ret;
+    }
+
+    if (!dir_add (directory, ".", sector)) {
+      dir_close (directory);
+      return ret;
+    }
+
+    if (!dir_add (directory, "..", sector)) {
+      dir_close (directory);
+      return ret;
+    }
+
+    dir_close (directory);
+    ret = true;
+  } 
+  return ret;
 }
 
 /* Opens and returns the directory for the given INODE, of which
