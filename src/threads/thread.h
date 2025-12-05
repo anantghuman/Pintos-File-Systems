@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <threads/synch.h>
 
+struct dir;
+
 /* States in a thread's life cycle. */
 enum thread_status
 {
@@ -103,7 +105,7 @@ struct thread
   struct list children;
   struct child_process *child_ptr;
   int exit_stat;
-  struct directory *curr_working_dir;
+  struct dir *curr_working_dir;
 
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
@@ -138,7 +140,7 @@ struct child_process {
    struct list_elem child_elem;
    bool success;
    struct semaphore load_wait;
-   struct directory *curr_working_dir;
+   struct dir *curr_working_dir;
 };
 
 /* If false (default), use round-robin scheduler.

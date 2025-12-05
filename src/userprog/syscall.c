@@ -6,6 +6,10 @@
 #include "pagedir.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "filesys/file.h"
+#include "filesys/inode.h"
+#include "filesys/directory.h"
+
 
 struct lock file_lock;
 
@@ -196,10 +200,18 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       if (thread_current ()->current_fd == 2147483647) {
         thread_current ()->current_fd = 2;
       }
-      file_desc->file = file;
+      struct inode *i = file_get_inode (file);
+      if (i && is_directory (i)) {
+        file_desc->is_dir = true;
+        file_desc->dir = (struct dir *) file;
+        file_desc->file = NULL;
+      } else {
+        file_desc->is_dir = false;
+        file_desc->dir = NULL;
+        file_desc->file = file;
+      }
       f->eax = file_desc->num_fd;
       list_push_back (&thread_current ()->fd_table, &file_desc->file_elem);
-      f->eax = file_desc->num_fd;
       lock_release (&file_lock);
       break;
     }
@@ -339,7 +351,11 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       file_desc = find_filept (*fd_ptr);
       if (file_desc) {
         lock_acquire(&file_lock);
-        file_close (file_desc->file);
+        if (file_desc->is_dir) {
+          dir_close (file_desc->dir);
+        } else {
+          file_close (file_desc->file);
+        }
         list_remove (&file_desc->file_elem);
         lock_release(&file_lock);
         free (file_desc);
@@ -351,7 +367,7 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       check_ptr (p);
       check_ptr (*p);
       lock_acquire (&file_lock);
-      //f->eax = dir_change ((const char *) *p);
+      f->eax = chdir_filesys_syscall(*p);
       lock_release (&file_lock);
       break;
     }
@@ -360,7 +376,7 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       check_ptr (p);
       check_ptr (*p);
       lock_acquire (&file_lock);
-      //f->eax = mkdir ((const char *) *p, 16);
+      f->eax = mkdir_filesys_syscall(*p);
       lock_release (&file_lock);
       break;
     }
@@ -377,7 +393,6 @@ static void syscall_handler (struct intr_frame *f UNUSED)
         lock_release (&file_lock);
         break;
       }
-      //f->eax = dir_readdir (file_desc->dir, *name_ptr);
       lock_release (&file_lock);
       break;
     }
@@ -408,8 +423,17 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       f->eax = inode_get_inumber (file_get_inode (file_desc->file));
       lock_release (&file_lock);
       break;
+      if (file_desc-> is_dir) {
+        f->eax = inode_get_inumber (dir_get_inode (file_desc->dir));
+      } else {
+        f->eax = inode_get_inumber (file_get_inode (file_desc->file));
+      }
+      lock_release (&file_lock);
+      break;
     }
+    
   }
+  
   // thread_current()->status = -1;
   // thread_exit();
 }

@@ -6,6 +6,8 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
+bool is_directory (struct inode *);
+
 /* A directory. */
 struct dir
 {
@@ -238,7 +240,7 @@ bool dir_remove (struct dir *dir, const char *name)
   /* Remove inode. */
   if (is_directory(inode))
     {
-      struct directory *remove_dir = dir_open (inode);
+      struct dir *remove_dir = dir_open (inode);
       char t[NAME_MAX + 1];
       while (dir_readdir (remove_dir, t))
         {
