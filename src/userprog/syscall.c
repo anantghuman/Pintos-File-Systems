@@ -154,7 +154,7 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       break;
     }
     //Soham drove
-    case SYS_REMOVE:
+    case SYS_REMOVE: 
       int *fd_ptr = (int *) f->esp + 1;
       check_ptr (fd_ptr);
       check_ptr ((const char *) *fd_ptr);
@@ -329,7 +329,7 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       lock_release (&file_lock);
       break;
     //Soham drove
-    case SYS_CLOSE:
+    case SYS_CLOSE: {
       fd_ptr = (int *) (f->esp) + 1;
       check_ptr (fd_ptr);
       if (*fd_ptr < 2) {
@@ -345,7 +345,8 @@ static void syscall_handler (struct intr_frame *f UNUSED)
         free (file_desc);
       }
       break;
-    case SYS_CHDIR:
+    }
+    case SYS_CHDIR: {
       char **p = (char **) (int*)(f->esp) + 1;
       check_ptr (p);
       check_ptr (*p);
@@ -353,7 +354,8 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       //f->eax = dir_change ((const char *) *p);
       lock_release (&file_lock);
       break;
-    case SYS_MKDIR:
+    }
+    case SYS_MKDIR: {
       char **p = (char **) (int*)(f->esp) + 1;
       check_ptr (p);
       check_ptr (*p);
@@ -361,7 +363,8 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       //f->eax = mkdir ((const char *) *p, 16);
       lock_release (&file_lock);
       break;
-    case SYS_READDIR:
+    }
+    case SYS_READDIR: {
       fd_ptr = (int *) (f->esp) + 1;
       char **p = (char **) (int *) (f->esp) + 2;
       check_ptr (fd_ptr);
@@ -377,7 +380,8 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       //f->eax = dir_readdir (file_desc->dir, *name_ptr);
       lock_release (&file_lock);
       break;
-    case SYS_ISDIR:
+    }
+    case SYS_ISDIR: {
       fd_ptr = (int *) (f->esp) + 1;
       check_ptr (fd_ptr);
       lock_acquire (&file_lock);
@@ -390,7 +394,8 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       f->eax = file_desc->is_dir;
       lock_release (&file_lock);
       break;
-    case SYS_INUMBER:
+    }
+    case SYS_INUMBER: {
       fd_ptr = (int *) (f->esp) + 1;
       check_ptr (fd_ptr);
       lock_acquire (&file_lock);
@@ -403,6 +408,7 @@ static void syscall_handler (struct intr_frame *f UNUSED)
       f->eax = inode_get_inumber (file_get_inode (file_desc->file));
       lock_release (&file_lock);
       break;
+    }
   }
   // thread_current()->status = -1;
   // thread_exit();
