@@ -183,3 +183,65 @@ static void do_format (void)
   free_map_close ();
   printf ("done.\n");
 }
+
+bool mkdir_filesys_syscall (const char *name)
+{
+  char fname[NAME_MAX + 1];
+  struct dir *dir;
+  if (!subdir_path (name, &dir, fname))
+    {
+      return false;
+    }
+  block_sector_t temp;
+  if (!free_map_allocate (1, &temp))
+    {
+      dir_close (dir);
+      return false;
+    }
+  if (!dir_create (temp, 16))
+    {
+      free_map_release (temp, 1);
+      dir_close (dir);
+      return false;
+    }
+  if (!dir_add (dir, fname, temp))
+    {
+      inode_remove (inode_open (temp));
+      free_map_release (temp, 1);
+      dir_close (dir);
+      return false;
+    }
+  struct dir *temp2 = dir_open (inode_open (temp));
+  dir_add (temp2, "..", inode_get_inumber (dir_get_inode (dir)));
+  dir_close (temp2);
+  dir_close (dir);
+  return true;
+}
+
+bool chdir_filesys_syscall (const char *name)
+{
+  struct dir *dir;
+  char fname[NAME_MAX + 1];
+  if (!subdir_path (name, &dir, fname))
+    {
+      return false;
+    }
+  struct inode *temp;
+  if (!dir_lookup (dir, fname, &temp))
+    {
+      dir_close (dir);
+      return false;
+    }
+  if (!is_directory (temp))
+    {
+      inode_close (temp);
+      dir_close (dir);
+      return false;
+    }
+  struct dir *end = dir_open (temp);
+  dir_close (thread_current ()->curr_working_dir);
+  thread_current ()->curr_working_dir = end;
+  dir_close (dir);
+  return true;
+}
+
