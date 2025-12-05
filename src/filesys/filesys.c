@@ -44,7 +44,8 @@ static bool resolve_path (char *name, struct dir **dir_out, char *file_name_out)
   directory = ((name[0] == '/') ? dir_open_root () : 
               dir_reopen (thread_current () -> curr_working_dir));
   
-  if (!directory) {
+  if (!directory)
+ {
     return false;
   }
 
@@ -60,13 +61,47 @@ static bool resolve_path (char *name, struct dir **dir_out, char *file_name_out)
   char *token = __strtok_r (path, "/", &temp);
   while (token != NULL) {
     if (token[0] == '\0') {
+      token = strtok_r (NULL, "/", &temp);
       continue;
     }
 
-    
-    
-    token = __strtok_r (NULL, "/", &temp);
+    strcpy (part, token);
+
+
+    if (temp && *temp != '\0')
+      {
+        struct inode *in = NULL;
+        if (!dir_lookup (directory, part, &in) || !inode_is_dir (in)) 
+          {
+            if (!inode_is_dir (in)) 
+              {
+                inode_close (in);
+              }
+            dir_close (directory);
+            free (path);
+            return false;
+          }
+
+        struct dir *t = dir_open (in);
+        dir_close(directory);
+        directory = t;
+      }
+    else
+      {
+        strlcpy (file_name_out, part, NAME_MAX + 1);
+        break;
+      }
+    token = strtok_r (NULL, "/", &temp);
   }
+
+  if (file_name_out[0] == '\0') 
+  {
+    strlcpy (file_name_out, ".", NAME_MAX + 1);
+  }
+  
+  *dir_out = directory;
+  free (path);
+  return true;
 
 }
 
