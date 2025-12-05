@@ -88,11 +88,9 @@ void thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
-
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -432,9 +430,9 @@ static void init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-  list_init(&t->fd_table);
+  list_init (&t->fd_table);
   t->current_fd = 2;
-  list_init(&t->children);
+  list_init (&t->children);
   t->exit_stat = -1;
   t->child_ptr = NULL;
 

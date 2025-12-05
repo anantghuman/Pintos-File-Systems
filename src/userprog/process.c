@@ -66,13 +66,13 @@ tid_t process_execute (const char *file_name)
   sema_init (&c->load_wait, 0);
   c->success = false;
   if (thread_current ()->curr_working_dir != NULL)
-    {
-      c->curr_working_dir = dir_reopen (thread_current ()->curr_working_dir);
-    } else
-    {
-      c->curr_working_dir = dir_open_root ();
-    }
-  struct shared_data *aux = malloc(sizeof(*aux));
+  {
+    c->curr_working_dir = dir_reopen (thread_current ()->curr_working_dir);
+  } else
+  {
+    c->curr_working_dir = dir_open_root ();
+  }
+  struct shared_data *aux = malloc (sizeof (*aux));
   if (!aux) {
     palloc_free_page (name);
     palloc_free_page (fn_copy);
@@ -84,7 +84,8 @@ tid_t process_execute (const char *file_name)
   tid = thread_create (n, PRI_DEFAULT, start_process, aux);
   c->pid = tid;
   palloc_free_page (name);
-  if (tid == TID_ERROR) {
+  if (tid == TID_ERROR) 
+  {
     palloc_free_page (fn_copy);
     free (c);
     free (aux);
@@ -155,7 +156,7 @@ int process_wait (tid_t child_tid UNUSED) {
   struct thread *current = thread_current ();
   struct list_elem *ce = list_begin (&current->children);
 
-  while(ce != list_end (&current->children)) {
+  while (ce != list_end (&current->children)) {
     struct child_process *c = list_entry (ce, struct child_process, child_elem);
     if (c->pid == child_tid) {
         sema_down (&c->wait);
@@ -182,17 +183,17 @@ void process_exit (void)
   if (cur->running_file != NULL) 
       {
         file_allow_write (cur->running_file);
-        lock_acquire(&file_lock);
+        lock_acquire (&file_lock);
         file_close (cur->running_file);
-        lock_release(&file_lock);
+        lock_release (&file_lock);
         cur->running_file = NULL;
       }
 
-  while (!list_empty (&cur ->fd_table)) {
+  while (!list_empty (&cur->fd_table)) {
     struct list_elem *temp = list_pop_front (&cur->fd_table);
     struct file_descriptor *fd = list_entry (temp, struct file_descriptor, 
                                                               file_elem);
-    lock_acquire(&file_lock);
+    lock_acquire (&file_lock);
     // if (fd->is_dir != NULL)
     //   dir_close (fd->dir);
     // if (fd->dir != NULL) {
@@ -202,7 +203,7 @@ void process_exit (void)
     //   dir_close (fd->dir);
     // }
     file_close (fd->file);
-    lock_release(&file_lock);
+    lock_release (&file_lock);
     free (fd);
   }
 
@@ -339,9 +340,9 @@ bool load (const char *file_name, void (**eip) (void), void **esp)
   char *name = palloc_get_page (0);
   if (name == NULL)
     {
-      lock_acquire(&file_lock);
+      lock_acquire (&file_lock);
       file_close (file);
-      lock_release(&file_lock);
+      lock_release (&file_lock);
       return false;
     }
   strlcpy (name, file_name, strlen (file_name) + 1);
@@ -441,12 +442,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp)
 done:
   /* We arrive here whether the load is successful or not. */
   if (success && file != NULL) {
-    file_deny_write(file);
+    file_deny_write (file);
     t->running_file = file;
   } else {
-    lock_acquire(&file_lock);
-    file_close(file);
-    lock_release(&file_lock);
+    lock_acquire (&file_lock);
+    file_close (file);
+    lock_release (&file_lock);
   }
   return success;
 }
@@ -566,84 +567,84 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 // handle pointers properly in order to add the right
 // arguments onto the stack.
 static bool setup_stack(void **esp, const char *file_name) {
-    uint8_t *kpage;
-    bool success = false;
-    char *argv[MAX_ARGS];
+  uint8_t *kpage;
+  bool success = false;
+  char *argv[MAX_ARGS];
 
-    kpage = palloc_get_page(PAL_USER | PAL_ZERO);
-    if (kpage != NULL) {
-      success = install_page((uint8_t *) PHYS_BASE - PGSIZE, kpage, true);
-      if (success) {
-        *esp = PHYS_BASE;
-        char *fn_copy = palloc_get_page(PAL_ZERO);
-         if (fn_copy == NULL) {
-           palloc_free_page(kpage);
-           return false;
-         }
-        strlcpy (fn_copy, file_name, PGSIZE);
+  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  if (kpage != NULL) {
+    success = install_page((uint8_t *) PHYS_BASE - PGSIZE, kpage, true);
+    if (success) {
+      *esp = PHYS_BASE;
+      char *fn_copy = palloc_get_page (PAL_ZERO);
+       if (fn_copy == NULL) {
+         palloc_free_page(kpage);
+         return false;
+       }
+      strlcpy (fn_copy, file_name, PGSIZE);
 
-        int argc = 0;
-        char *t;
-        char *temp = strtok_r(fn_copy, " ", &t);
-        
-        while (temp != NULL) {
-          *esp = (char*)*esp - (strlen(temp) + 1);
-          if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
-            palloc_free_page(kpage);
-            palloc_free_page(fn_copy);
-            return false;
-          }
-          memcpy(*esp, temp, strlen(temp) + 1);
-          argv[argc++] = *esp;
-          temp = strtok_r(NULL, " ", &t);
-        }
-        int padding = ((uintptr_t)*esp) % 4;
-        if (padding != 0) {
-          *esp = (char *)*esp - padding;
-          if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
-            palloc_free_page(kpage);
-            palloc_free_page(fn_copy);
-            return false;
-          }
-          memset(*esp, 0, padding);
-        }
-        *esp = (uint8_t *) *esp - sizeof(char*);
-        *(char **)*esp = NULL;
-        for (int i = argc - 1; i >= 0; i--) {
-          *esp = (char *)*esp -  sizeof(char*);
-          if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
-            palloc_free_page(kpage);
-            palloc_free_page(fn_copy);
-            return false;
-          }
-          *(char**) *esp = argv[i];
-        }
-        char** argv_start = (char **) *esp;
-        *esp = (char *)*esp - sizeof(char **);
+      int argc = 0;
+      char *t;
+      char *temp = strtok_r(fn_copy, " ", &t);
+      
+      while (temp != NULL) {
+        *esp = (char*)*esp - (strlen(temp) + 1);
         if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
           palloc_free_page(kpage);
           palloc_free_page(fn_copy);
           return false;
         }
-        *((char ***)(*esp)) = argv_start;
-        *esp = (char *)*esp - sizeof(int);
+        memcpy(*esp, temp, strlen(temp) + 1);
+        argv[argc++] = *esp;
+        temp = strtok_r(NULL, " ", &t);
+      }
+      int padding = ((uintptr_t)*esp) % 4;
+      if (padding != 0) {
+        *esp = (char *)*esp - padding;
         if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
           palloc_free_page(kpage);
           palloc_free_page(fn_copy);
           return false;
         }
-        *(int*) *esp = argc;
-        *esp = (char *)*esp - sizeof(void*);
+        memset(*esp, 0, padding);
+      }
+      *esp = (uint8_t *) *esp - sizeof(char*);
+      *(char **)*esp = NULL;
+      for (int i = argc - 1; i >= 0; i--) {
+        *esp = (char *)*esp -  sizeof(char*);
         if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
           palloc_free_page(kpage);
           palloc_free_page(fn_copy);
           return false;
         }
-        *(void **) *esp = NULL;
+        *(char**) *esp = argv[i];
+      }
+      char** argv_start = (char **) *esp;
+      *esp = (char *)*esp - sizeof(char **);
+      if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
+        palloc_free_page(kpage);
         palloc_free_page(fn_copy);
-    }
-    else
-      palloc_free_page(kpage);
+        return false;
+      }
+      *((char ***)(*esp)) = argv_start;
+      *esp = (char *)*esp - sizeof(int);
+      if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
+        palloc_free_page(kpage);
+        palloc_free_page(fn_copy);
+        return false;
+      }
+      *(int*) *esp = argc;
+      *esp = (char *)*esp - sizeof(void*);
+      if ((uintptr_t)*esp < (uintptr_t)PHYS_BASE - PGSIZE) {
+        palloc_free_page(kpage);
+        palloc_free_page(fn_copy);
+        return false;
+      }
+      *(void **) *esp = NULL;
+      palloc_free_page(fn_copy);
+  }
+  else
+    palloc_free_page(kpage);
   }
   return success;
 }
@@ -654,7 +655,7 @@ static bool setup_stack(void **esp, const char *file_name) {
    otherwise, it is read-only.
    UPAGE must not already be mapped.
    KPAGE should probably be a page obtained from the user pool
-   with palloc_get_page().
+   with palloc_get_page ().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
 static bool install_page (void *upage, void *kpage, bool writable)

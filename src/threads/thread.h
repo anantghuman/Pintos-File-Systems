@@ -125,7 +125,8 @@ struct thread
 // file descriptors and child processes along
 // with other necessary variables in order to
 // manage these structs within the syscalls.
-struct file_descriptor {
+struct file_descriptor 
+{
    int num_fd;
    bool is_dir;
    struct dir *dir;
@@ -133,7 +134,8 @@ struct file_descriptor {
    struct list_elem file_elem;
 };
 
-struct child_process {
+struct child_process 
+{
    int32_t pid;
    int exit_stat;
    struct semaphore wait;

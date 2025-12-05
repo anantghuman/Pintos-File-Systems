@@ -6,7 +6,6 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
-#include "string.h"
 #include "threads/thread.h"
 
 /* Partition that contains the file system. */
@@ -31,13 +30,16 @@ void filesys_init (bool format)
   free_map_open ();
 }
 
-static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) {
+static bool subdir_path (char *name, struct dir **dir_out, 
+  char *file_name_out)
+{
   struct dir *directory = NULL;
   int len;
   char *temp = NULL;
   char part[NAME_MAX + 1];
 
-  if (!name ||  name[0] == '\0') {
+  if (!name ||  name[0] == '\0') 
+  {
     return false;
   }
 
@@ -50,7 +52,8 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
   }
 
   char *path = malloc (strlen (name) + 1); 
-  if (!path) {
+  if (!path) 
+  {
     dir_close (directory);
     return false;
   }
@@ -59,13 +62,16 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
   file_name_out[0] = '\0';
 
   char *token = strtok_r (path, "/", &temp);
-  while (token != NULL) {
-    if (token[0] == '\0') {
+  while (token != NULL) 
+  {
+    if (token[0] == '\0') 
+    {
       token = strtok_r (NULL, "/", &temp);
       continue;
     }
 
-    if (strlen (token) > NAME_MAX) {
+    if (strlen (token) > NAME_MAX) 
+    {
       dir_close (directory);
       free (path);
       return false;
@@ -91,7 +97,7 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
             }
 
         struct dir *t = dir_open (in);
-        dir_close(directory);
+        dir_close (directory);
         directory = t;
       }
     else
@@ -160,7 +166,8 @@ struct file *filesys_open (const char *name)
       return NULL;
     }
   dir_close (dir);
-  return is_directory(inode) ? (struct file *) dir_open(inode) : file_open (inode);
+  return is_directory(inode) ? (struct file *) dir_open(inode) : 
+  file_open (inode);
 }
 
 /* Deletes the file named NAME.

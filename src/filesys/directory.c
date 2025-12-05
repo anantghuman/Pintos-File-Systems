@@ -33,20 +33,23 @@ bool dir_create (block_sector_t sector, size_t entry_cnt)
   {
     in = inode_open (sector);
     if (!in)
-     {
+    {
       return ret;
-     }
+    }
     struct dir *directory = dir_open (in);
-    if (!directory) {
+    if (!directory) 
+    {
       return ret;
     }
 
-    if (!dir_add (directory, ".", sector)) {
+    if (!dir_add (directory, ".", sector)) 
+    {
       dir_close (directory);
       return ret;
     }
 
-    if (!dir_add (directory, "..", sector)) {
+    if (!dir_add (directory, "..", sector)) 
+    {
       dir_close (directory);
       return ret;
     }
@@ -141,13 +144,13 @@ bool dir_lookup (const struct dir *dir, const char *name, struct inode **inode)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  if (strlen(name) == 1 && name[0] == '.')
+  if (strlen (name) == 1 && name[0] == '.')
     {
-      *inode= inode_reopen (dir->inode);
+      *inode = inode_reopen (dir->inode);
       return true;
     }
 
-  if (strcmp(name, "..") == 0)
+  if (strcmp (name, "..") == 0)
     {
       struct dir_entry temp;
       if (lookup (dir, "..", &temp, NULL))
@@ -238,7 +241,7 @@ bool dir_remove (struct dir *dir, const char *name)
   
 
   /* Remove inode. */
-  if (is_directory(inode))
+  if (is_directory (inode))
     {
       struct dir *remove_dir = dir_open (inode);
       char t[NAME_MAX + 1];
@@ -253,7 +256,8 @@ bool dir_remove (struct dir *dir, const char *name)
 
   /* Erase directory entry. */
   e.in_use = false;
-  inode_write_at (dir->inode, &e, sizeof (struct dir_entry), ofs) != sizeof (struct dir_entry);
+  inode_write_at (dir->inode, &e, sizeof (struct dir_entry), ofs) 
+  != sizeof (struct dir_entry);
   inode_remove (inode);
   success = true;
 
