@@ -17,6 +17,8 @@ void syscall_init (void)
   lock_init (&file_lock);
 }
 
+
+
 /* Verifies that a pointer is valid, Otherwise returns -1*/
 void check_ptr (const void *ptr) 
 {

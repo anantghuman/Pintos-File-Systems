@@ -29,7 +29,7 @@ struct shared_data {
 };
 
 /* Starts a new thread running a user program loaded from
-   FILENAME.  The new thread may be scheduled (and may even exit)
+   FILENAME.  The new thread may be scheduled (and may even Fexit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
    // Sai drove
@@ -640,6 +640,20 @@ static bool setup_stack(void **esp, const char *file_name) {
   return success;
 }
 
+struct file_descriptor *process_get_fd (int fd) {
+  struct thread *t  = thread_current ();
+  struct list_elem *e;
+
+  e = list_begin (&t->fd_table);
+  while (e != list_end (&t->fd_table)) {
+    struct file_descriptor *temp = list_entry (e, struct file_descriptor, file_elem);
+    if (temp->num_fd == fd) {
+      return temp;
+    }
+    e = list_next (e);
+  }
+
+}
 
 /* Adds a mapping from user virtual address UPAGE to kernel
    virtual address KPAGE to the page table.

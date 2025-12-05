@@ -173,6 +173,14 @@ bool filesys_remove (const char *name)
   return success;
 }
 
+static bool sys_readdir (int fd, char *name) {
+  struct file_descriptor *f;
+}
+
+static int sys_number (int fd) {
+  struct 
+}
+
 /* Formats the file system. */
 static void do_format (void)
 {
