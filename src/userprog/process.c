@@ -65,12 +65,12 @@ tid_t process_execute (const char *file_name)
   sema_init (&c->wait, 0);
   sema_init (&c->load_wait, 0);
   c->success = false;
-  if (thread_current ()->current_working_dir != NULL)
+  if (thread_current ()->curr_working_dir != NULL)
     {
-      c->current_working_dir = dir_reopen (thread_current ()->current_working_dir);
+      c->curr_working_dir = dir_reopen (thread_current ()->curr_working_dir);
     } else
     {
-      c->current_working_dir = dir_open_root ();
+      c->curr_working_dir = dir_open_root ();
     }
   struct shared_data *aux = malloc(sizeof(*aux));
   if (!aux) {
@@ -116,6 +116,7 @@ static void start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+  thread_current ()->curr_working_dir = c->curr_working_dir;
   success = load (file_name, &if_.eip, &if_.esp);
   if (c != NULL) {
     c->success = success;

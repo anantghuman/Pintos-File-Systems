@@ -6,8 +6,8 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
-#include "thread.h"
 #include "string.h"
+#include "threads/thread.h"
 
 /* Partition that contains the file system. */
 struct block *fs_device;
@@ -42,7 +42,7 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
   }
 
   directory = ((name[0] == '/') ? dir_open_root () : 
-              dir_reopen (thread_current () -> curr_working_dir));
+              dir_reopen (thread_current ()->curr_working_dir));
   
   if (!directory)
  {
@@ -55,25 +55,25 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
     return false;
   }
 
-  strcpy (path, name);
+  strlcpy (path, name, strlen (name) + 1);
   file_name_out[0] = '\0';
 
-  char *token = __strtok_r (path, "/", &temp);
+  char *token = strtok_r (path, "/", &temp);
   while (token != NULL) {
     if (token[0] == '\0') {
       token = strtok_r (NULL, "/", &temp);
       continue;
     }
 
-    strcpy (part, token);
+    strlcpy (part, token, strlen (token) + 1);
 
 
     if (temp && *temp != '\0')
       {
         struct inode *in = NULL;
-        if (!dir_lookup (directory, part, &in) || !inode_is_dir (in)) 
+        if (!dir_lookup (directory, part, &in) || !is_directory (in)) 
           {
-            if (!inode_is_dir (in)) 
+            if (!is_directory (in)) 
               {
                 inode_close (in);
               }
@@ -149,7 +149,7 @@ struct file *filesys_open (const char *name)
 
   if (strcmp (name, "/") != 0)
     {
-      return file_open (inode_open_root ());
+      return file_open (inode_open_root);
     }
   char fname[NAME_MAX + 1];
   if (!subdir_path (name, &dir, fname))
