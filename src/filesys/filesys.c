@@ -31,7 +31,7 @@ void filesys_init (bool format)
   free_map_open ();
 }
 
-static bool resolve_path (char *name, struct dir **dir_out, char *file_name_out) {
+static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) {
   struct dir *directory;
   int len;
   char *temp;
@@ -49,7 +49,7 @@ static bool resolve_path (char *name, struct dir **dir_out, char *file_name_out)
     return false;
   }
 
-  char *path = malloc (strlen (name)); 
+  char *path = malloc (strlen (name) + 1); 
   if (!path) {
     dir_close (directory);
     return false;
@@ -117,13 +117,19 @@ bool filesys_create (const char *name, off_t initial_size)
 {
   block_sector_t inode_sector = 0;
   struct dir *dir = dir_open_root ();
+  char fname[NAME_MAX + 1];
+  if (!subdir_path ((char*) name, &dir, fname))
+    {
+      return false;
+    }
   bool success = (dir != NULL && free_map_allocate (1, &inode_sector) &&
                   inode_create (inode_sector, initial_size, false) &&
                   dir_add (dir, name, inode_sector));
   if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
+    
   dir_close (dir);
-
+  dir_add (dir, fname, inode_sector);
   return success;
 }
 
@@ -141,6 +147,20 @@ struct file *filesys_open (const char *name)
     dir_lookup (dir, name, &inode);
   dir_close (dir);
 
+  if (strcmp (name, "/") != 0)
+    {
+      return file_open (inode_open_root ());
+    }
+  char fname[NAME_MAX + 1];
+  if (!subdir_path (name, &dir, fname))
+    {
+      return NULL;
+    }
+  if (!dir_lookup (dir, fname, &inode))
+    {
+      dir_close (dir);
+      return NULL;
+    }
   return file_open (inode);
 }
 
@@ -151,29 +171,15 @@ struct file *filesys_open (const char *name)
 bool filesys_remove (const char *name)
 {
   struct dir *dir = dir_open_root ();
+  char fname[NAME_MAX + 1];
+  if (!subdir_path (name, &dir, fname))
+    {
+      return false;
+    }
   bool success = dir != NULL && dir_remove (dir, name);
   dir_close (dir);
 
   return success;
-}
-
-bool subdir_path (struct dir **out, const char *path, char temp[NAME_MAX + 1])
-{
-  if (path == NULL || strlen (path) == 0)
-    {
-      return false;
-    }
-  struct dir *dir;
-  if (path[0] == '/')
-    {
-      dir = dir_open_root ();
-    } else
-    {
-      dir = dir_reopen (thread_current ()->current_working_dir);
-    }
-  
-  
-    
 }
 
 /* Formats the file system. */
