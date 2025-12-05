@@ -81,6 +81,25 @@ bool filesys_remove (const char *name)
   return success;
 }
 
+bool subdir_path (struct dir **out, const char *path, char temp[NAME_MAX + 1])
+{
+  if (path == NULL || strlen (path) == 0)
+    {
+      return false;
+    }
+  struct dir *dir;
+  if (path[0] == '/')
+    {
+      dir = dir_open_root ();
+    } else
+    {
+      dir = dir_reopen (thread_current ()->current_working_dir);
+    }
+  
+  
+    
+}
+
 /* Formats the file system. */
 static void do_format (void)
 {

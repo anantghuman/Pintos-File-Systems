@@ -141,15 +141,22 @@ bool dir_lookup (const struct dir *dir, const char *name, struct inode **inode)
 
   if (strlen(name) == 1 && name[0] == '.')
     {
-      
+      *inode= inode_reopen (dir->inode);
+      return true;
     }
 
   if (strcmp(name, "..") == 0)
     {
-      
+      struct dir_entry temp;
+      if (lookup (dir, "..", &temp, NULL))
+        {
+          *inode = inode_open (temp.inode_sector);
+          return true;
+        } else 
+        {
+          return false;
+        }
     }
-  
-  
 
   if (lookup (dir, name, &e, NULL))
     *inode = inode_open (e.inode_sector);
