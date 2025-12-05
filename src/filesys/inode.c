@@ -11,6 +11,8 @@
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
 
+static struct lock i_lock;
+
 /* On-disk inode.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
@@ -51,7 +53,7 @@ struct inode
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
 
-   static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate);
+static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate);
 static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
 {
   ASSERT (inode != NULL);
@@ -180,7 +182,11 @@ static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, 
 static struct list open_inodes;
 
 /* Initializes the inode module. */
-void inode_init (void) { list_init (&open_inodes); }
+void inode_init (void) 
+{
+  lock_init (&i_lock); 
+  list_init (&open_inodes); 
+}
 
 /* Initializes an inode with LENGTH bytes of data and
    writes the new inode to sector SECTOR on the file system
@@ -232,7 +238,7 @@ struct inode *inode_open (block_sector_t sector)
   struct list_elem *e;
   struct inode *inode;
   
-
+  lock_acquire (&i_lock);
   /* Check whether this inode is already open. */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
        e = list_next (e))
@@ -241,6 +247,8 @@ struct inode *inode_open (block_sector_t sector)
       if (inode->sector == sector)
         {
           inode_reopen (inode);
+          lock_release (&i_lock);
+          inode->open_cnt++;
           return inode;
         }
     }
@@ -248,8 +256,10 @@ struct inode *inode_open (block_sector_t sector)
   /* Allocate memory. */
   inode = malloc (sizeof *inode);
   if (inode == NULL)
+  {
+    lock_release (&i_lock);
     return NULL;
-  lock_init(&inode->inode_lock);
+  }
 
   /* Initialize. */
   list_push_front (&open_inodes, &inode->elem);
@@ -259,6 +269,7 @@ struct inode *inode_open (block_sector_t sector)
   inode->removed = false;
   block_read (fs_device, inode->sector, &inode->data);
   memcpy (&inode->data, &inode->data, sizeof (inode->data));
+  lock_release (&i_lock);
   return inode;
 }
 
@@ -266,7 +277,11 @@ struct inode *inode_open (block_sector_t sector)
 struct inode *inode_reopen (struct inode *inode)
 {
   if (inode != NULL)
-    inode->open_cnt++;
+    {
+      lock_acquire (&i_lock);
+      inode->open_cnt++;
+      lock_release (&i_lock);
+    }
   return inode;
 }
 
@@ -331,11 +346,14 @@ void inode_close (struct inode *inode)
   if (inode == NULL)
     return;
 
+  lock_acquire (&i_lock);
+
   /* Release resources if this was the last opener. */
   if (--inode->open_cnt == 0)
     {
       /* Remove from inode list and release lock. */
       list_remove (&inode->elem);
+      lock_release (&i_lock);
 
       /* Deallocate blocks if removed. */
       if (inode->removed)
@@ -347,6 +365,10 @@ void inode_close (struct inode *inode)
         }
 
       free (inode);
+    }
+  else
+    {
+      lock_release (&i_lock);
     }
 }
 
