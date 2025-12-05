@@ -65,6 +65,13 @@ tid_t process_execute (const char *file_name)
   sema_init (&c->wait, 0);
   sema_init (&c->load_wait, 0);
   c->success = false;
+  if (thread_current ()->current_working_dir != NULL)
+    {
+      c->current_working_dir = dir_reopen (thread_current ()->current_working_dir);
+    } else
+    {
+      c->current_working_dir = dir_open_root ();
+    }
   struct shared_data *aux = malloc(sizeof(*aux));
   if (!aux) {
     palloc_free_page (name);
