@@ -282,7 +282,8 @@ void inode_free_direct_blocks (struct inode *inode)
   // free direct blocks
   for (int i = 0; i < DIRECT_BLOCKS_COUNT; i++) 
   {
-    free_map_release (inode->data.direct_blocks[i], 1);
+    if (inode->data.direct_blocks[i] != 0)
+      free_map_release (inode->data.direct_blocks[i], 1);
   }
 }
 
@@ -295,9 +296,8 @@ void inode_free_indirect_block (struct inode *inode)
     block_read (fs_device, inode->data.indirect_block, temp);
     for (int i = 0; i < BLOCK_SECTOR_SIZE / sizeof (block_sector_t); i++) 
     {
-      
-      free_map_release (temp[i], 1);
-      
+      if (temp[i] != 0)
+        free_map_release (temp[i], 1);
     }
     free (temp);
     free_map_release (inode->data.indirect_block, 1);

@@ -193,6 +193,14 @@ void process_exit (void)
     struct file_descriptor *fd = list_entry (temp, struct file_descriptor, 
                                                               file_elem);
     lock_acquire(&file_lock);
+    // if (fd->is_dir != NULL)
+    //   dir_close (fd->dir);
+    // if (fd->dir != NULL) {
+    //   if (fd->dir->inode != NULL) {
+    //     inode_close (fd->dir->inode);
+    //   }
+    //   dir_close (fd->dir);
+    // }
     file_close (fd->file);
     lock_release(&file_lock);
     free (fd);
@@ -638,21 +646,6 @@ static bool setup_stack(void **esp, const char *file_name) {
       palloc_free_page(kpage);
   }
   return success;
-}
-
-struct file_descriptor *process_get_fd (int fd) {
-  struct thread *t  = thread_current ();
-  struct list_elem *e;
-
-  e = list_begin (&t->fd_table);
-  while (e != list_end (&t->fd_table)) {
-    struct file_descriptor *temp = list_entry (e, struct file_descriptor, file_elem);
-    if (temp->num_fd == fd) {
-      return temp;
-    }
-    e = list_next (e);
-  }
-
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

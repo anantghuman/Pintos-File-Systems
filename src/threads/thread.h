@@ -125,6 +125,8 @@ struct thread
 // manage these structs within the syscalls.
 struct file_descriptor {
    int num_fd;
+   bool is_dir;
+   struct dir *dir;
    struct file *file;
    struct list_elem file_elem;
 };

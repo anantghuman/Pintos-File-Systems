@@ -345,6 +345,64 @@ static void syscall_handler (struct intr_frame *f UNUSED)
         free (file_desc);
       }
       break;
+    case SYS_CHDIR:
+      char **p = (char **) (int*)(f->esp) + 1;
+      check_ptr (p);
+      check_ptr (*p);
+      lock_acquire (&file_lock);
+      //f->eax = dir_change ((const char *) *p);
+      lock_release (&file_lock);
+      break;
+    case SYS_MKDIR:
+      char **p = (char **) (int*)(f->esp) + 1;
+      check_ptr (p);
+      check_ptr (*p);
+      lock_acquire (&file_lock);
+      //f->eax = mkdir ((const char *) *p, 16);
+      lock_release (&file_lock);
+      break;
+    case SYS_READDIR:
+      fd_ptr = (int *) (f->esp) + 1;
+      char **p = (char **) (int *) (f->esp) + 2;
+      check_ptr (fd_ptr);
+      check_ptr (p);
+      check_ptr (*p);
+      lock_acquire (&file_lock);
+      file_desc = find_filept (*fd_ptr);
+      if (file_desc == NULL || !file_desc->is_dir) {
+        f->eax = false;
+        lock_release (&file_lock);
+        break;
+      }
+      //f->eax = dir_readdir (file_desc->dir, *name_ptr);
+      lock_release (&file_lock);
+      break;
+    case SYS_ISDIR:
+      fd_ptr = (int *) (f->esp) + 1;
+      check_ptr (fd_ptr);
+      lock_acquire (&file_lock);
+      file_desc = find_filept (*fd_ptr);
+      if (file_desc == NULL) {
+        f->eax = false;
+        lock_release (&file_lock);
+        break;
+      }
+      f->eax = file_desc->is_dir;
+      lock_release (&file_lock);
+      break;
+    case SYS_INUMBER:
+      fd_ptr = (int *) (f->esp) + 1;
+      check_ptr (fd_ptr);
+      lock_acquire (&file_lock);
+      file_desc = find_filept (*fd_ptr);
+      if (file_desc == NULL) {
+        f->eax = -1;
+        lock_release (&file_lock);
+        break;
+      }
+      f->eax = inode_get_inumber (file_get_inode (file_desc->file));
+      lock_release (&file_lock);
+      break;
   }
   // thread_current()->status = -1;
   // thread_exit();

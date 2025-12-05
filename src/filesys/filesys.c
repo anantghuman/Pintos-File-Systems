@@ -32,7 +32,7 @@ void filesys_init (bool format)
 }
 
 static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) {
-  struct dir *directory;
+  struct dir *directory = NULL;
   int len;
   char *temp = NULL;
   char part[NAME_MAX + 1];
@@ -65,6 +65,11 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
       continue;
     }
 
+    if (strlen (token) > NAME_MAX) {
+      dir_close (directory);
+      free (path);
+      return false;
+    }
     strlcpy (part, token, strlen (token) + 1);
 
 
@@ -73,14 +78,17 @@ static bool subdir_path (char *name, struct dir **dir_out, char *file_name_out) 
         struct inode *in = NULL;
         if (!dir_lookup (directory, part, &in) || !is_directory (in)) 
           {
-            if (!is_directory (in)) 
-              {
-                inode_close (in);
-              }
             dir_close (directory);
             free (path);
             return false;
           }
+          if (!is_directory (in)) 
+            {
+                inode_close (in);
+                dir_close (directory);
+                free (path);
+                return false;
+            }
 
         struct dir *t = dir_open (in);
         dir_close(directory);
@@ -152,7 +160,7 @@ struct file *filesys_open (const char *name)
       return NULL;
     }
   dir_close (dir);
-  return is_directory(inode) ? dir_open(inode) : file_open (inode);
+  return is_directory(inode) ? (struct file *) dir_open(inode) : file_open (inode);
 }
 
 /* Deletes the file named NAME.
@@ -171,14 +179,6 @@ bool filesys_remove (const char *name)
   dir_close (dir);
 
   return success;
-}
-
-static bool sys_readdir (int fd, char *name) {
-  struct file_descriptor *f;
-}
-
-static int sys_number (int fd) {
-  struct 
 }
 
 /* Formats the file system. */
