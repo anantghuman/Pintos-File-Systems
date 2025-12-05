@@ -103,11 +103,12 @@ struct thread
   struct list children;
   struct child_process *child_ptr;
   int exit_stat;
+  struct directory *curr_working_dir;
 
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
   uint32_t *pagedir; /* Page directory. */
-  struct directory *curr_working_dir;
+  
 #endif
 
   /* Owned by thread.c. */
