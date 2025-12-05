@@ -11,7 +11,7 @@ static const int DIRECT_BLOCKS_COUNT = 12;
 struct bitmap;
 
 void inode_init (void);
-bool inode_create (block_sector_t, off_t);
+bool inode_create (block_sector_t, off_t, bool is_dir);
 // static block_sector_t get_data_block (struct inode_disk *inode_d, size_t index, bool allocate);
 struct inode *inode_open (block_sector_t);
 struct inode *inode_reopen (struct inode *);

@@ -26,8 +26,15 @@ struct dir_entry
 bool dir_create (block_sector_t sector, size_t entry_cnt)
 {
   bool ret = false;
-  if (inode_create (sector, entry_cnt * sizeof (struct dir_entry))) {
-    struct dir *directory = dir_open (inode_open (sector));
+  struct inode *in = NULL;
+  if (inode_create (sector, entry_cnt * sizeof (struct dir_entry), true)) 
+  {
+    in = inode_open (sector);
+    if (!in)
+     {
+      return ret;
+     }
+    struct dir *directory = dir_open (in);
     if (!directory) {
       return ret;
     }
@@ -131,6 +138,18 @@ bool dir_lookup (const struct dir *dir, const char *name, struct inode **inode)
 
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
+
+  if (strlen(name) == 1 && name[0] == '.')
+    {
+      
+    }
+
+  if (strcmp(name, "..") == 0)
+    {
+      
+    }
+  
+  
 
   if (lookup (dir, name, &e, NULL))
     *inode = inode_open (e.inode_sector);
