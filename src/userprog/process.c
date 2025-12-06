@@ -65,6 +65,7 @@ tid_t process_execute (const char *file_name)
   sema_init (&c->wait, 0);
   sema_init (&c->load_wait, 0);
   c->success = false;
+  // sai drove
   if (thread_current ()->curr_working_dir != NULL)
   {
     c->curr_working_dir = dir_reopen (thread_current ()->curr_working_dir);

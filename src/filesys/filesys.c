@@ -33,6 +33,7 @@ void filesys_init (bool format)
 static bool subdir_path (char *name, struct dir **dir_out, 
   char *file_name_out)
 {
+  // soham drove
   struct dir *directory = NULL;
   int len;
   char *temp = NULL;
@@ -62,6 +63,7 @@ static bool subdir_path (char *name, struct dir **dir_out,
   file_name_out[0] = '\0';
 
   char *token = strtok_r (path, "/", &temp);
+  // anant drove
   while (token != NULL) 
   {
     if (token[0] == '\0') 
@@ -69,7 +71,6 @@ static bool subdir_path (char *name, struct dir **dir_out,
       token = strtok_r (NULL, "/", &temp);
       continue;
     }
-
     if (strlen (token) > NAME_MAX) 
     {
       dir_close (directory);
@@ -153,6 +154,7 @@ bool filesys_create (const char *name, off_t initial_size)
    or if an internal memory allocation fails. */
 struct file *filesys_open (const char *name)
 {
+  // sai drove
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
   char fname[NAME_MAX + 1];
@@ -176,8 +178,10 @@ struct file *filesys_open (const char *name)
    or if an internal memory allocation fails. */
 bool filesys_remove (const char *name)
 {
+  
   struct dir *dir = dir_open_root ();
   char fname[NAME_MAX + 1];
+  // sai drove
   if (!subdir_path (name, &dir, fname))
     {
       return false;
@@ -201,6 +205,7 @@ static void do_format (void)
 
 bool mkdir_filesys_syscall (const char *name)
 {
+  // sai drove
   char fname[NAME_MAX + 1];
   struct dir *dir;
   if (!subdir_path (name, &dir, fname))
@@ -235,6 +240,7 @@ bool mkdir_filesys_syscall (const char *name)
 
 bool chdir_filesys_syscall (const char *name)
 {
+  // sai drove
   struct dir *dir;
   char fname[NAME_MAX + 1];
   if (!subdir_path (name, &dir, fname))

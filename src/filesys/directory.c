@@ -27,8 +27,10 @@ struct dir_entry
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, size_t entry_cnt)
 {
+  // soham drove
   bool ret = false;
   struct inode *in = NULL;
+  // anant drove
   if (inode_create (sector, entry_cnt * sizeof (struct dir_entry), true)) 
   {
     in = inode_open (sector);
@@ -144,14 +146,17 @@ bool dir_lookup (const struct dir *dir, const char *name, struct inode **inode)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  // anant drove
   if (strlen (name) == 1 && name[0] == '.')
     {
+      // sai drove
       *inode = inode_reopen (dir->inode);
       return true;
     }
 
   if (strcmp (name, "..") == 0)
     {
+      // sai drove
       struct dir_entry temp;
       if (lookup (dir, "..", &temp, NULL))
         {
@@ -241,6 +246,7 @@ bool dir_remove (struct dir *dir, const char *name)
   
 
   /* Remove inode. */
+  // soham drove
   if (is_directory (inode))
     {
       struct dir *remove_dir = dir_open (inode);

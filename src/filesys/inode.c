@@ -18,13 +18,11 @@ struct inode_disk
   off_t length;         /* File size in bytes. */
   unsigned magic;       /* Magic number. */
   bool is_dir;
-  uint32_t unused[111]; /* Not used. */
 
-  block_sector_t direct_blocks[12];
+  // sai driving
+  block_sector_t direct_blocks[123];
   block_sector_t indirect_block;
   block_sector_t double_indirect_block;
-
-  
 };
 
 static struct lock inode_lock;
@@ -63,6 +61,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos)
     return -1;
 }
 
+// soham drove
 static block_sector_t get_data_block (struct inode_disk *inode_d, 
   size_t index, bool allocate) 
   {
@@ -78,6 +77,7 @@ static block_sector_t get_data_block (struct inode_disk *inode_d,
       return inode_d->direct_blocks[index] ? inode_d->direct_blocks[index] : -1;
   }
   index -= DIRECT_BLOCKS_COUNT;
+  // sai drove
   if (index < BLOCK_SECTOR_SIZE / sizeof (block_sector_t)) 
     {
       block_sector_t indirect = inode_d->indirect_block;
@@ -119,6 +119,7 @@ static block_sector_t get_data_block (struct inode_disk *inode_d,
       free (indirect_data);
       return ret;
     }
+    // sai drove
     index -= BLOCK_SECTOR_SIZE/ sizeof (block_sector_t);
     size_t index1 = index / (BLOCK_SECTOR_SIZE/ sizeof (block_sector_t));
     size_t index2 = index % (BLOCK_SECTOR_SIZE/ sizeof (block_sector_t));
@@ -210,6 +211,7 @@ bool inode_create (block_sector_t sector, off_t length, bool is_dir)
      one sector in size, and you should fix that. */
   ASSERT (sizeof *disk_inode == BLOCK_SECTOR_SIZE);
 
+  // soham drove
   disk_inode = calloc (1, sizeof *disk_inode);
   disk_inode->is_dir = is_dir;
   if (disk_inode != NULL)
@@ -296,7 +298,7 @@ block_sector_t inode_get_inumber (const struct inode *inode)
   return inode->sector;
 }
 
-
+// anant drove
 void inode_free_direct_blocks (struct inode *inode)
 {
   // free direct blocks
@@ -307,6 +309,7 @@ void inode_free_direct_blocks (struct inode *inode)
   }
 }
 
+// anant drove
 void inode_free_indirect_block (struct inode *inode)
 {
   // free indirect blocks
@@ -324,6 +327,7 @@ void inode_free_indirect_block (struct inode *inode)
   }
 }
 
+// anant drove
 void inode_free_double_indirect_block (struct inode *inode)
 {
   // free double indirect blocks
@@ -379,6 +383,7 @@ void inode_remove (struct inode *inode)
   inode->removed = true;
 }
 
+// soham drove
 bool is_directory (struct inode *i) 
 {
   return i->data.is_dir;
@@ -456,6 +461,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     return 0;
   }
 
+  // anant drove
   while (size > 0)
     {
       /* Sector to write, starting byte offset within sector. */
