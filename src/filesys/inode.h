@@ -5,7 +5,7 @@
 #include "filesys/off_t.h"
 #include "devices/block.h"
 
-static const int DIRECT_BLOCKS_COUNT = 12;
+static const int DIRECT_BLOCKS_COUNT = 123;
 
 
 struct bitmap;
